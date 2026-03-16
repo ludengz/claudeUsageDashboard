@@ -84,7 +84,8 @@ describe('GET /api/cost', () => {
 describe('GET /api/cache', () => {
   it('returns cache stats', async () => {
     const { data } = await fetchJson('/api/cache?from=2026-03-10&to=2026-03-10');
-    expect(data.total_input_tokens).to.equal(3000);
+    // allInput = nonCached(3000) + cacheRead(600) + cacheCreation(400) = 4000
+    expect(data.total_input_tokens).to.equal(4000);
     expect(data.cache_read_tokens).to.equal(600);
     expect(data.cache_read_rate).to.be.a('number');
   });

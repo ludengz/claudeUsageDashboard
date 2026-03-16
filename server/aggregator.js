@@ -123,14 +123,14 @@ export function aggregateByModel(records) {
 }
 
 export function aggregateCache(records) {
-  let totalInput = 0, cacheRead = 0, cacheCreation = 0;
-  for (const r of records) { totalInput += r.input_tokens; cacheRead += r.cache_read_tokens; cacheCreation += r.cache_creation_tokens; }
-  const nonCached = totalInput - cacheRead - cacheCreation;
+  let nonCached = 0, cacheRead = 0, cacheCreation = 0;
+  for (const r of records) { nonCached += r.input_tokens; cacheRead += r.cache_read_tokens; cacheCreation += r.cache_creation_tokens; }
+  const allInput = nonCached + cacheRead + cacheCreation;
   return {
     cache_read_tokens: cacheRead, cache_creation_tokens: cacheCreation,
-    non_cached_input_tokens: Math.max(0, nonCached), total_input_tokens: totalInput,
-    cache_read_rate: totalInput > 0 ? Math.round((cacheRead / totalInput) * 100) / 100 : 0,
-    cache_creation_rate: totalInput > 0 ? Math.round((cacheCreation / totalInput) * 100) / 100 : 0,
-    no_cache_rate: totalInput > 0 ? Math.round((nonCached / totalInput) * 100) / 100 : 0,
+    non_cached_input_tokens: nonCached, total_input_tokens: allInput,
+    cache_read_rate: allInput > 0 ? Math.round((cacheRead / allInput) * 100) / 100 : 0,
+    cache_creation_rate: allInput > 0 ? Math.round((cacheCreation / allInput) * 100) / 100 : 0,
+    no_cache_rate: allInput > 0 ? Math.round((nonCached / allInput) * 100) / 100 : 0,
   };
 }

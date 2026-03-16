@@ -87,7 +87,8 @@ describe('aggregateByModel', () => {
 describe('aggregateCache', () => {
   it('computes cache efficiency rates', () => {
     const cache = aggregateCache(sampleRecords);
-    expect(cache.total_input_tokens).to.equal(8000);
+    // allInput = nonCached(8000) + cacheRead(1700) + cacheCreation(800) = 10500
+    expect(cache.total_input_tokens).to.equal(10500);
     expect(cache.cache_read_tokens).to.equal(1700);
     expect(cache.cache_read_rate).to.be.a('number');
   });
