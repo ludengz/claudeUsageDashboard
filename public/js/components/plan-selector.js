@@ -5,13 +5,16 @@ const PLANS = {
 };
 
 export function initPlanSelector(container, onChange) {
+  const saved = localStorage.getItem('selectedPlan') || 'max20x';
+  const savedPrice = localStorage.getItem('customPrice') || '';
+
   container.innerHTML = `
     <select id="plan-select">
       ${Object.entries(PLANS).map(([key, p]) =>
-        `<option value="${key}" ${key === 'max5x' ? 'selected' : ''}>${p.label} ($${p.price}/mo)</option>`
+        `<option value="${key}" ${key === saved ? 'selected' : ''}>${p.label} ($${p.price}/mo)</option>`
       ).join('')}
     </select>
-    <input type="number" id="custom-price" placeholder="Custom $" style="width:80px;display:none;">
+    <input type="number" id="custom-price" placeholder="Custom $" value="${savedPrice}" style="width:80px;display:${savedPrice ? 'inline-block' : 'none'};">
   `;
 
   const select = container.querySelector('#plan-select');
@@ -19,6 +22,9 @@ export function initPlanSelector(container, onChange) {
   const emitChange = () => {
     const plan = select.value;
     const customPrice = customInput.value ? parseFloat(customInput.value) : null;
+    localStorage.setItem('selectedPlan', plan);
+    if (customPrice) localStorage.setItem('customPrice', customInput.value);
+    else localStorage.removeItem('customPrice');
     onChange({ plan, customPrice });
   };
   select.addEventListener('change', emitChange);

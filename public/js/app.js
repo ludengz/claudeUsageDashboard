@@ -10,7 +10,7 @@ import { renderSessionTable } from './charts/session-stats.js';
 
 const state = {
   dateRange: { from: null, to: null },
-  plan: { plan: 'max5x', customPrice: null },
+  plan: { plan: 'max20x', customPrice: null },
   granularity: null,
   sessionSort: 'date',
   sessionOrder: 'desc',
