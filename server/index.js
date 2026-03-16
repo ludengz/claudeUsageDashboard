@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 const LOG_DIR = path.join(os.homedir(), '.claude', 'projects');
 
 // Resolve d3 via Node module resolution so it works when dependencies are hoisted (e.g. npx)
-const d3Dir = path.dirname(require.resolve('d3/dist/d3.min.js'));
+const d3Dir = path.join(path.dirname(require.resolve('d3')), '..', 'dist');
 
 const app = express();
 app.use('/lib/d3', express.static(d3Dir));
