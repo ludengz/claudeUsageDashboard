@@ -57,10 +57,12 @@ export function renderProjectDistribution(container, data) {
     })
     .each(function(d) {
       const text = d3.select(this);
+      text.append('tspan').style('fill', '#f8fafc').style('font-weight', '600').text(fmt(d.total_tokens));
+      text.append('tspan').style('fill', '#64748b').text(' (');
       text.append('tspan').style('fill', '#60a5fa').text(`in:${fmt(d.total_input_tokens)}`);
       text.append('tspan').style('fill', '#64748b').text(' / ');
       text.append('tspan').style('fill', '#f97316').text(`out:${fmt(d.total_output_tokens)}`);
-      text.append('tspan').style('fill', '#64748b').text('  ');
+      text.append('tspan').style('fill', '#64748b').text(')  ');
       text.append('tspan').style('fill', '#f59e0b').style('font-weight', '600').text(`$${d.estimated_cost_usd.toFixed(2)}`);
     });
 
