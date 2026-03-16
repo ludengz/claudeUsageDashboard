@@ -1,18 +1,27 @@
 {
-  "name": "claudeusagereport",
+  "name": "claude-usage-dashboard",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
+  "description": "Dashboard that visualizes Claude Code usage from local session logs",
+  "main": "server/index.js",
+  "bin": {
+    "claude-usage-dashboard": "bin/cli.js"
   },
+  "files": [
+    "bin/",
+    "server/",
+    "public/"
+  ],
   "scripts": {
     "start": "node server/index.js",
     "test": "mocha test/**/*.test.js --timeout 5000"
   },
-  "keywords": [],
+  "keywords": ["claude", "usage", "dashboard", "token", "cost"],
   "author": "",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ludengz/claudeUsageDashboard.git"
+  },
   "type": "module",
   "dependencies": {
     "d3": "^7.9.0",

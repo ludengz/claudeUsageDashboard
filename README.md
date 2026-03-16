@@ -14,19 +14,24 @@ A self-hosted dashboard that visualizes your [Claude Code](https://claude.ai/cod
 - **Project distribution** — Horizontal bar chart comparing token usage across projects
 - **Session details** — Sortable, paginated table of every session with cost and duration
 
-## Getting Started
+## Quick Start
+
+Run directly without installing:
 
 ```bash
-# Clone and install
-git clone https://github.com/ludengz/claudeUsageDashboard.git
-cd claudeUsageDashboard
-npm install
-
-# Start the dashboard
-npm start
+npx claude-usage-dashboard
 ```
 
 Open http://localhost:3000 in your browser.
+
+### From Source
+
+```bash
+git clone https://github.com/ludengz/claudeUsageDashboard.git
+cd claudeUsageDashboard
+npm install
+npm start
+```
 
 The dashboard reads logs from `~/.claude/projects/` — if you use Claude Code, these already exist on your machine. Logs are parsed once at startup; restart the server to pick up new session data.
 
