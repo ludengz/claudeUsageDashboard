@@ -55,16 +55,28 @@ Each `.jsonl` file in `~/.claude/projects/<encoded-project-path>/` contains conv
       "input_tokens": 3,
       "cache_creation_input_tokens": 8407,
       "cache_read_input_tokens": 6490,
-      "output_tokens": 0
+      "cache_creation": {
+        "ephemeral_5m_input_tokens": 8407,
+        "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 0,
+      "service_tier": "standard",
+      "inference_geo": "global"
     }
   }
 }
 ```
 
+**Fields captured:** `message.model`, `message.usage.{input_tokens, output_tokens, cache_creation_input_tokens, cache_read_input_tokens}`, `timestamp`, `sessionId`.
+
+**Fields ignored:** `usage.cache_creation.ephemeral_*` (treated as a single cache write rate — Anthropic currently prices both tiers the same), `usage.service_tier`, `usage.inference_geo`, `server_tool_use`.
+
+**Special model values:** Records with `model: "<synthetic>"` are internal system messages and are excluded from both token counts and cost calculations.
+
 **Parsing logic:**
 - Scan all `~/.claude/projects/*/` directories for `.jsonl` files
 - Derive project name from directory name (e.g., `-Users-ludengzhao-Workspace-passionfruit` → `passionfruit`, taking the last path segment)
-- Extract only `type: "assistant"` records
+- Extract only `type: "assistant"` records, skip `model: "<synthetic>"`
 - Pull `message.model`, `message.usage`, `timestamp`, and `sessionId` from each record
 - Group records by `sessionId` to form sessions
 
@@ -75,8 +87,8 @@ Each `.jsonl` file in `~/.claude/projects/<encoded-project-path>/` contains conv
 Aggregated token data over time.
 
 **Query params:**
-- `from` (ISO date) — start of range
-- `to` (ISO date) — end of range
+- `from` (ISO date, e.g. `2026-03-01`) — start of range (inclusive, treated as start of day UTC)
+- `to` (ISO date, e.g. `2026-03-15`) — end of range (inclusive, treated as end of day UTC)
 - `granularity` — `hourly | daily | weekly | monthly` (auto-selected if omitted, based on range span: ≤2 days→hourly, ≤14 days→daily, ≤60 days→weekly, else monthly)
 - `project` (optional) — filter by project name
 - `model` (optional) — filter by model
@@ -211,7 +223,8 @@ Cost comparison: subscription vs API pricing.
   "savings_percent": 32.5,
   "cost_per_day": [
     { "date": "2026-03-10", "api_cost": 12.30, "subscription_daily": 3.33 }
-  ]
+  ],
+  "note": "subscription_daily = monthly price / days in that calendar month (e.g. $100/31 for March). For ranges spanning multiple months, each day uses its own month's divisor."
 }
 ```
 
@@ -257,6 +270,8 @@ Users can override subscription prices via the plan selector UI.
 
 Unknown models encountered in logs are flagged with "unknown pricing" and excluded from cost calculations.
 
+**Token counting convention:** `input_tokens` from the API already includes cache tokens. To avoid double-counting, `total_tokens` is defined as `input_tokens + output_tokens`. Cache fields (`cache_read_tokens`, `cache_creation_tokens`) are reported separately for analysis but are a breakdown of the input, not additive.
+
 ## Frontend Design
 
 ### Layout
@@ -278,21 +293,21 @@ Dark theme dashboard (background `#0f172a`) with the following sections top-to-b
 - **Date range picker** changes trigger all charts and the session table to reload via API calls
 - **Granularity toggle** on the trend chart re-fetches `/api/usage` with the selected granularity
 - **Plan selector** changes re-fetch `/api/cost` and update savings card
-- **Session table** supports client-side sorting by clicking column headers, project filtering via search box, and pagination
+- **Session table** sorting, filtering, and pagination are all server-side via `/api/sessions` query params. Column header clicks and filter changes trigger new API requests.
 - **Chart tooltips** on hover for all D3 charts showing exact values
 
 ### D3 Charts
 
-All charts rendered with D3.js v7 (loaded via ES module from CDN). Each chart is a standalone module in `public/js/charts/` that exports a `render(container, data)` function and handles its own scales, axes, transitions, and tooltips.
+All charts rendered with D3.js v7 (installed as npm dependency and served from `node_modules` via Express static middleware, so the app works fully offline). Each chart is a standalone module in `public/js/charts/` that exports a `render(container, data)` function and handles its own scales, axes, transitions, and tooltips.
 
 ## Data Flow
 
-1. User opens `http://localhost:3000`
+1. User opens `http://localhost:3000` (port configurable via `PORT` env var, default 3000)
 2. `app.js` initializes: loads default date range (last 30 days), fetches all API endpoints in parallel
 3. API responses populate summary cards and render D3 charts
 4. User changes date range → all endpoints re-fetched → charts re-rendered with transitions
 5. User changes plan → `/api/cost` re-fetched → cost comparison and savings card updated
-6. Session table interactions (sort, filter, page) handled client-side for loaded data, or via API for pagination
+6. Session table sort/filter/page changes → `/api/sessions` re-fetched → table re-rendered
 
 ## Error Handling
 
@@ -300,3 +315,12 @@ All charts rendered with D3.js v7 (loaded via ES module from CDN). Each chart is
 - If no `.jsonl` files found: show empty state with "No session data found"
 - Unknown models: display in charts with "unknown" label, exclude from cost calculations
 - Malformed log entries: skip silently, log warning to server console
+
+**API error response format:**
+```json
+{
+  "error": "Description of what went wrong",
+  "code": "NO_DATA | PARSE_ERROR | INVALID_PARAMS"
+}
+```
+HTTP status codes: 400 for invalid params, 404 for no data directory, 500 for parse failures.
