@@ -56,7 +56,8 @@ describe('GET /api/projects', () => {
     const { data } = await fetchJson('/api/projects');
     expect(data.projects).to.have.length(1);
     expect(data.projects[0].name).to.equal('testproject');
-    expect(data.projects[0].total_tokens).to.equal(4300);
+    // total = input(3000) + output(1300) + cache_read(600) + cache_creation(400) = 5300
+    expect(data.projects[0].total_tokens).to.equal(5300);
   });
 });
 
@@ -65,7 +66,7 @@ describe('GET /api/sessions', () => {
     const { data } = await fetchJson('/api/sessions?from=2026-03-10&to=2026-03-10');
     expect(data.sessions).to.have.length(1);
     expect(data.sessions[0].sessionId).to.equal('s1');
-    expect(data.sessions[0].total_tokens).to.equal(4300);
+    expect(data.sessions[0].total_tokens).to.equal(5300);
     expect(data.pagination.total_sessions).to.equal(1);
   });
 });

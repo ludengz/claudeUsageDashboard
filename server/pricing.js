@@ -29,15 +29,22 @@ export function getModelPricing(modelId) {
   return MODEL_PRICING[modelId] || null;
 }
 
+/**
+ * Calculate the API cost for a single usage record.
+ * Returns 0 for unknown models.
+ *
+ * In Claude Code logs, input_tokens is the non-cached input.
+ * cache_read_tokens and cache_creation_tokens are separate, additive fields.
+ * cost = input * input_rate + cache_read * read_rate + cache_creation * write_rate + output * output_rate
+ */
 export function calculateRecordCost(record) {
   const pricing = MODEL_PRICING[record.model];
   if (!pricing) return 0;
 
-  const nonCachedInput = record.input_tokens - record.cache_read_tokens - record.cache_creation_tokens;
   const M = 1_000_000;
 
   return (
-    (nonCachedInput / M) * pricing.input_price_per_mtok +
+    (record.input_tokens / M) * pricing.input_price_per_mtok +
     (record.cache_read_tokens / M) * pricing.cache_read_price_per_mtok +
     (record.cache_creation_tokens / M) * pricing.cache_creation_price_per_mtok +
     (record.output_tokens / M) * pricing.output_price_per_mtok

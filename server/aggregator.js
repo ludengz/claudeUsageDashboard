@@ -78,7 +78,7 @@ export function aggregateBySession(records) {
     sessionId: s.sessionId, project: s.project, models: Array.from(s.models),
     input_tokens: s.input_tokens, output_tokens: s.output_tokens,
     cache_read_tokens: s.cache_read_tokens, cache_creation_tokens: s.cache_creation_tokens,
-    total_tokens: s.input_tokens + s.output_tokens,
+    total_tokens: s.input_tokens + s.output_tokens + s.cache_read_tokens + s.cache_creation_tokens,
     startTime: s.startTime, endTime: s.endTime,
     duration_minutes: Math.round((new Date(s.endTime) - new Date(s.startTime)) / 60000),
     estimated_cost_usd: Math.round(s.cost * 100) / 100,
@@ -89,28 +89,32 @@ export function aggregateByProject(records) {
   const map = new Map();
   for (const r of records) {
     if (!map.has(r.project)) {
-      map.set(r.project, { name: r.project, projectDirName: r.projectDirName, total_input_tokens: 0, total_output_tokens: 0, sessions: new Set(), cost: 0 });
+      map.set(r.project, { name: r.project, projectDirName: r.projectDirName, total_input_tokens: 0, total_output_tokens: 0, total_cache_read: 0, total_cache_creation: 0, sessions: new Set(), cost: 0 });
     }
     const p = map.get(r.project);
     p.total_input_tokens += r.input_tokens;
     p.total_output_tokens += r.output_tokens;
+    p.total_cache_read += r.cache_read_tokens;
+    p.total_cache_creation += r.cache_creation_tokens;
     p.sessions.add(r.sessionId);
     p.cost += calculateRecordCost(r);
   }
   return Array.from(map.values()).map(p => {
     const path = p.projectDirName ? '/' + p.projectDirName.replace(/^-/, '').replace(/-/g, '/') : '';
-    return { name: p.name, path, total_input_tokens: p.total_input_tokens, total_output_tokens: p.total_output_tokens, total_tokens: p.total_input_tokens + p.total_output_tokens, estimated_cost_usd: Math.round(p.cost * 100) / 100, session_count: p.sessions.size };
+    return { name: p.name, path, total_input_tokens: p.total_input_tokens, total_output_tokens: p.total_output_tokens, total_tokens: p.total_input_tokens + p.total_output_tokens + p.total_cache_read + p.total_cache_creation, estimated_cost_usd: Math.round(p.cost * 100) / 100, session_count: p.sessions.size };
   }).sort((a, b) => b.total_tokens - a.total_tokens);
 }
 
 export function aggregateByModel(records) {
   const map = new Map();
   for (const r of records) {
-    if (!map.has(r.model)) map.set(r.model, { id: r.model, total_tokens: 0, input_tokens: 0, output_tokens: 0 });
+    if (!map.has(r.model)) map.set(r.model, { id: r.model, total_tokens: 0, input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_creation_tokens: 0 });
     const m = map.get(r.model);
     m.input_tokens += r.input_tokens;
     m.output_tokens += r.output_tokens;
-    m.total_tokens += r.input_tokens + r.output_tokens;
+    m.cache_read_tokens += r.cache_read_tokens;
+    m.cache_creation_tokens += r.cache_creation_tokens;
+    m.total_tokens += r.input_tokens + r.output_tokens + r.cache_read_tokens + r.cache_creation_tokens;
   }
   return Array.from(map.values()).map(m => {
     const pricing = getModelPricing(m.id);

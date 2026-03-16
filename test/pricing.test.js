@@ -34,12 +34,13 @@ describe('calculateRecordCost', () => {
   it('accounts for cache token pricing', () => {
     const record = {
       model: 'claude-sonnet-4-6',
-      input_tokens: 1000000,
+      input_tokens: 300000,   // non-cached input (additive, not inclusive of cache)
       output_tokens: 0,
       cache_read_tokens: 500000,
       cache_creation_tokens: 200000,
     };
     const cost = calculateRecordCost(record);
+    // 300K * $3/M = $0.90 + 500K * $0.30/M = $0.15 + 200K * $3.75/M = $0.75 = $1.80
     expect(cost).to.be.closeTo(1.80, 0.01);
   });
 
