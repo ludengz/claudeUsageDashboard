@@ -68,7 +68,11 @@ export function createApiRouter(logBaseDir) {
     for (const r of records) apiCost += calculateRecordCost(r);
     apiCost = Math.round(apiCost * 100) / 100;
     const dayMap = new Map();
-    for (const r of records) { const day = r.timestamp.slice(0, 10); dayMap.set(day, (dayMap.get(day) || 0) + calculateRecordCost(r)); }
+    for (const r of records) {
+      const d = new Date(r.timestamp);
+      const day = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      dayMap.set(day, (dayMap.get(day) || 0) + calculateRecordCost(r));
+    }
     const costPerDay = Array.from(dayMap.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([date, cost]) => {
       const d = new Date(date);
       const daysInMonth = new Date(d.getUTCFullYear(), d.getUTCMonth() + 1, 0).getUTCDate();

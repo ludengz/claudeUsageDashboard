@@ -2,8 +2,9 @@ import { calculateRecordCost, getModelPricing } from './pricing.js';
 
 export function filterByDateRange(records, from, to) {
   if (!from && !to) return records;
-  const start = from ? new Date(from + 'T00:00:00.000Z').getTime() : -Infinity;
-  const end = to ? new Date(to + 'T23:59:59.999Z').getTime() : Infinity;
+  // Use local time boundaries (no Z suffix = local timezone)
+  const start = from ? new Date(from + 'T00:00:00.000').getTime() : -Infinity;
+  const end = to ? new Date(to + 'T23:59:59.999').getTime() : Infinity;
   return records.filter(r => {
     const t = new Date(r.timestamp).getTime();
     return t >= start && t <= end;
@@ -19,23 +20,29 @@ export function autoGranularity(from, to) {
   return 'monthly';
 }
 
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function localDateStr(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 function bucketKey(timestamp, granularity) {
   const d = new Date(timestamp);
   switch (granularity) {
     case 'hourly':
-      return d.toISOString().slice(0, 13) + ':00';
+      return `${localDateStr(d)}T${pad(d.getHours())}:00`;
     case 'daily':
-      return d.toISOString().slice(0, 10);
+      return localDateStr(d);
     case 'weekly': {
-      const day = d.getUTCDay();
+      const day = d.getDay();
       const monday = new Date(d);
-      monday.setUTCDate(d.getUTCDate() - ((day + 6) % 7));
-      return monday.toISOString().slice(0, 10);
+      monday.setDate(d.getDate() - ((day + 6) % 7));
+      return localDateStr(monday);
     }
     case 'monthly':
-      return d.toISOString().slice(0, 7);
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
     default:
-      return d.toISOString().slice(0, 10);
+      return localDateStr(d);
   }
 }
 
