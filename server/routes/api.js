@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { parseLogDirectory } from '../parser.js';
 import { filterByDateRange, autoGranularity, aggregateByTime, aggregateBySession, aggregateByProject, aggregateByModel, aggregateCache } from '../aggregator.js';
 import { calculateRecordCost, PLAN_DEFAULTS } from '../pricing.js';
+import { createQuotaFetcher } from '../quota.js';
 
 export function createApiRouter(logBaseDir, options = {}) {
   const router = Router();
@@ -97,6 +98,16 @@ export function createApiRouter(logBaseDir, options = {}) {
   });
 
   router.get('/cache', (req, res) => { res.json(aggregateCache(applyFilters(req.query))); });
+
+  const quotaFetcher = options.quotaFetcher || createQuotaFetcher();
+  router.get('/quota', async (req, res) => {
+    try {
+      const data = await quotaFetcher.fetchQuota();
+      res.json(data);
+    } catch (err) {
+      res.json({ available: false, error: err.message });
+    }
+  });
 
   router.get('/status', (req, res) => {
     res.json({

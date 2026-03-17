@@ -1,4 +1,4 @@
-import { fetchUsage, fetchModels, fetchProjects, fetchSessions, fetchCost, fetchCache, fetchStatus } from './api.js';
+import { fetchUsage, fetchModels, fetchProjects, fetchSessions, fetchCost, fetchCache, fetchStatus, fetchQuota } from './api.js';
 import { initDatePicker } from './components/date-picker.js';
 import { initPlanSelector } from './components/plan-selector.js';
 import { renderTokenTrend } from './charts/token-trend.js';
@@ -7,6 +7,7 @@ import { renderModelDistribution } from './charts/model-distribution.js';
 import { renderCacheEfficiency } from './charts/cache-efficiency.js';
 import { renderProjectDistribution } from './charts/project-distribution.js';
 import { renderSessionTable } from './charts/session-stats.js';
+import { renderQuotaGauges } from './charts/quota-gauge.js';
 
 const state = {
   dateRange: { from: null, to: null },
@@ -19,6 +20,8 @@ const state = {
   autoRefresh: true,
   autoRefreshInterval: 30,
   _refreshTimer: null,
+  quotaRefreshInterval: 120,
+  _quotaTimer: null,
 };
 
 let datePicker, planSelector;
@@ -37,10 +40,20 @@ function updateLastUpdated() {
   }
 }
 
+async function loadQuota() {
+  try {
+    const data = await fetchQuota();
+    renderQuotaGauges(document.getElementById('chart-quota'), data);
+    const el = document.getElementById('quota-last-updated');
+    if (el && data.lastFetched) el.textContent = `Updated ${new Date(data.lastFetched).toLocaleTimeString()}`;
+  } catch { /* silently degrade */ }
+}
+
 function startAutoRefresh() {
   stopAutoRefresh();
   if (state.autoRefresh) {
     state._refreshTimer = setInterval(() => loadAll(), state.autoRefreshInterval * 1000);
+    state._quotaTimer = setInterval(() => loadQuota(), state.quotaRefreshInterval * 1000);
   }
 }
 
@@ -48,6 +61,10 @@ function stopAutoRefresh() {
   if (state._refreshTimer) {
     clearInterval(state._refreshTimer);
     state._refreshTimer = null;
+  }
+  if (state._quotaTimer) {
+    clearInterval(state._quotaTimer);
+    state._quotaTimer = null;
   }
 }
 
@@ -161,7 +178,7 @@ function init() {
     loadAll();
   });
 
-  document.getElementById('btn-refresh').addEventListener('click', () => loadAll());
+  document.getElementById('btn-refresh').addEventListener('click', () => { loadAll(); loadQuota(); });
 
   const autoToggle = document.getElementById('auto-refresh-toggle');
   autoToggle.addEventListener('change', () => {
@@ -174,6 +191,7 @@ function init() {
   });
 
   loadAll();
+  loadQuota();
   startAutoRefresh();
 }
 

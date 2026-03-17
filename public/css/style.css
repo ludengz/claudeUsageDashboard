@@ -245,6 +245,14 @@ body {
   z-index: 100;
 }
 
+.quota-unavailable {
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 20px;
+  text-align: center;
+}
+#quota-section .chart-container { min-height: auto; }
+
 @media (max-width: 768px) {
   .summary-cards { grid-template-columns: repeat(2, 1fr); }
   .chart-row-3 { grid-template-columns: 1fr; }
