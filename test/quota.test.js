@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import express from 'express';
-import { readCredentials, getAccessToken } from '../server/credentials.js';
+import { readCredentials, getAccessToken, getSubscriptionInfo } from '../server/credentials.js';
 import { createQuotaFetcher } from '../server/quota.js';
 import { createApiRouter } from '../server/routes/api.js';
 
@@ -184,5 +184,79 @@ describe('GET /api/quota (unavailable)', () => {
     const data = await res.json();
     expect(data.available).to.be.false;
     expect(data.error).to.equal('no_credentials');
+  });
+});
+
+describe('getSubscriptionInfo', () => {
+  let tmpFile;
+  afterEach(() => { if (tmpFile && fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile); });
+
+  it('detects max20x from rateLimitTier', () => {
+    tmpFile = path.join(os.tmpdir(), `sub-test-${Date.now()}.json`);
+    fs.writeFileSync(tmpFile, JSON.stringify({
+      claudeAiOauth: { subscriptionType: 'max', rateLimitTier: 'default_claude_max_20x' }
+    }));
+    const info = getSubscriptionInfo(tmpFile);
+    expect(info.plan).to.equal('max20x');
+  });
+
+  it('detects max5x from rateLimitTier', () => {
+    tmpFile = path.join(os.tmpdir(), `sub-test-${Date.now()}.json`);
+    fs.writeFileSync(tmpFile, JSON.stringify({
+      claudeAiOauth: { subscriptionType: 'max', rateLimitTier: 'default_claude_max_5x' }
+    }));
+    const info = getSubscriptionInfo(tmpFile);
+    expect(info.plan).to.equal('max5x');
+  });
+
+  it('detects pro from subscriptionType', () => {
+    tmpFile = path.join(os.tmpdir(), `sub-test-${Date.now()}.json`);
+    fs.writeFileSync(tmpFile, JSON.stringify({
+      claudeAiOauth: { subscriptionType: 'pro', rateLimitTier: '' }
+    }));
+    const info = getSubscriptionInfo(tmpFile);
+    expect(info.plan).to.equal('pro');
+  });
+
+  it('returns null plan for unknown subscription', () => {
+    tmpFile = path.join(os.tmpdir(), `sub-test-${Date.now()}.json`);
+    fs.writeFileSync(tmpFile, JSON.stringify({
+      claudeAiOauth: { subscriptionType: 'free', rateLimitTier: '' }
+    }));
+    const info = getSubscriptionInfo(tmpFile);
+    expect(info.plan).to.be.null;
+  });
+
+  it('returns null for missing file', () => {
+    expect(getSubscriptionInfo('/nonexistent.json')).to.be.null;
+  });
+});
+
+describe('GET /api/subscription', () => {
+  let server, baseUrl, tmpDir;
+
+  before((done) => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sub-api-'));
+    const projectDir = path.join(tmpDir, '-Users-test-Workspace-testproject');
+    fs.mkdirSync(projectDir);
+    fs.writeFileSync(path.join(projectDir, 'sess.jsonl'),
+      JSON.stringify({ type: 'assistant', sessionId: 's1', timestamp: '2026-03-10T10:00:00.000Z', message: { model: 'claude-sonnet-4-6', usage: { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } } })
+    );
+
+    const app = express();
+    app.use('/api', createApiRouter(tmpDir, {
+      getSubscriptionInfo: () => ({ subscriptionType: 'max', rateLimitTier: 'default_claude_max_20x', plan: 'max20x' }),
+    }));
+    server = app.listen(0, () => { baseUrl = `http://localhost:${server.address().port}`; done(); });
+  });
+
+  after((done) => { server.close(() => { fs.rmSync(tmpDir, { recursive: true }); done(); }); });
+
+  it('returns detected subscription plan', async () => {
+    const res = await fetch(`${baseUrl}/api/subscription`);
+    const data = await res.json();
+    expect(data.plan).to.equal('max20x');
+    expect(data.subscriptionType).to.equal('max');
+    expect(data.rateLimitTier).to.equal('default_claude_max_20x');
   });
 });

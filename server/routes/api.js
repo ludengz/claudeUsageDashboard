@@ -3,6 +3,7 @@ import { parseLogDirectory } from '../parser.js';
 import { filterByDateRange, autoGranularity, aggregateByTime, aggregateBySession, aggregateByProject, aggregateByModel, aggregateCache } from '../aggregator.js';
 import { calculateRecordCost, PLAN_DEFAULTS } from '../pricing.js';
 import { createQuotaFetcher } from '../quota.js';
+import { getSubscriptionInfo } from '../credentials.js';
 
 export function createApiRouter(logBaseDir, options = {}) {
   const router = Router();
@@ -107,6 +108,11 @@ export function createApiRouter(logBaseDir, options = {}) {
     } catch (err) {
       res.json({ available: false, error: err.message });
     }
+  });
+
+  router.get('/subscription', (req, res) => {
+    const info = options.getSubscriptionInfo ? options.getSubscriptionInfo() : getSubscriptionInfo();
+    res.json(info || { plan: null, subscriptionType: null, rateLimitTier: null });
   });
 
   router.get('/status', (req, res) => {

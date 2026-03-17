@@ -14,6 +14,21 @@ export function readCredentials(credentialsPath = CREDENTIALS_PATH) {
   }
 }
 
+export function getSubscriptionInfo(credentialsPath = CREDENTIALS_PATH) {
+  const creds = readCredentials(credentialsPath);
+  if (!creds) return null;
+
+  const { subscriptionType, rateLimitTier } = creds;
+  const combined = `${subscriptionType || ''} ${rateLimitTier || ''}`.toLowerCase();
+
+  let plan = null;
+  if (combined.includes('20x')) plan = 'max20x';
+  else if (combined.includes('5x')) plan = 'max5x';
+  else if (combined.includes('pro')) plan = 'pro';
+
+  return { subscriptionType: subscriptionType || null, rateLimitTier: rateLimitTier || null, plan };
+}
+
 export function getAccessToken(credentialsPath = CREDENTIALS_PATH) {
   const creds = readCredentials(credentialsPath);
   if (!creds || !creds.accessToken) return null;

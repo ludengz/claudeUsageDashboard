@@ -13,3 +13,4 @@ export async function fetchCost(params = {}) { return (await fetch(`${BASE}/cost
 export async function fetchCache(params = {}) { return (await fetch(`${BASE}/cache${qs(params)}`)).json(); }
 export async function fetchStatus() { return (await fetch(`${BASE}/status`)).json(); }
 export async function fetchQuota() { return (await fetch(`${BASE}/quota`)).json(); }
+export async function fetchSubscription() { return (await fetch(`${BASE}/subscription`)).json(); }

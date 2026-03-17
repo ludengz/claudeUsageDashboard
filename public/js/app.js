@@ -1,4 +1,4 @@
-import { fetchUsage, fetchModels, fetchProjects, fetchSessions, fetchCost, fetchCache, fetchStatus, fetchQuota } from './api.js';
+import { fetchUsage, fetchModels, fetchProjects, fetchSessions, fetchCost, fetchCache, fetchStatus, fetchQuota, fetchSubscription } from './api.js';
 import { initDatePicker } from './components/date-picker.js';
 import { initPlanSelector } from './components/plan-selector.js';
 import { renderTokenTrend } from './charts/token-trend.js';
@@ -189,6 +189,20 @@ function init() {
       stopAutoRefresh();
     }
   });
+
+  // Auto-detect subscription tier
+  fetchSubscription().then(info => {
+    if (info.plan) {
+      planSelector.setDetectedPlan(info.plan);
+      state.plan = planSelector.getPlan();
+    }
+    const tierLabels = { pro: 'Pro', max5x: 'Max 5x', max20x: 'Max 20x' };
+    const label = tierLabels[info.plan];
+    if (label) {
+      const h2 = document.querySelector('#quota-section h2');
+      if (h2) h2.textContent = `Subscription Quota (${label})`;
+    }
+  }).catch(() => {});
 
   loadAll();
   loadQuota();
