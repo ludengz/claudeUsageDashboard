@@ -15,7 +15,18 @@ export function renderProjectDistribution(container, data) {
     return;
   }
 
-  const margin = { top: 10, right: 360, bottom: 10, left: 120 };
+  // Measure longest project name to set left margin dynamically
+  const tempSvg = el.append('svg').style('position', 'absolute').style('visibility', 'hidden');
+  const tempText = tempSvg.append('text').style('font-size', '12px');
+  let maxLabelWidth = 120;
+  for (const p of data.projects) {
+    tempText.text(p.name);
+    maxLabelWidth = Math.max(maxLabelWidth, tempText.node().getComputedTextLength());
+  }
+  tempSvg.remove();
+  const leftMargin = Math.ceil(maxLabelWidth) + 16;
+
+  const margin = { top: 10, right: 360, bottom: 10, left: leftMargin };
   const barHeight = 24;
   const gap = 8;
   const height = data.projects.length * (barHeight + gap) + margin.top + margin.bottom;

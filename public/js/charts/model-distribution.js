@@ -20,13 +20,21 @@ export function renderModelDistribution(container, data) {
     return;
   }
 
-  const size = Math.min(container.clientWidth, 200);
+  const containerWidth = container.clientWidth;
+  const size = Math.min(containerWidth * 0.45, 200);
   const radius = size / 2;
   const innerRadius = radius * 0.55;
 
-  const wrapper = el.append('div').style('display', 'flex').style('align-items', 'center').style('gap', '20px');
+  const isNarrow = containerWidth < 280;
+  const wrapper = el.append('div')
+    .style('display', 'flex')
+    .style('flex-direction', isNarrow ? 'column' : 'row')
+    .style('align-items', 'center')
+    .style('gap', isNarrow ? '8px' : '20px');
 
-  const svg = wrapper.append('svg').attr('width', size).attr('height', size)
+  const svg = wrapper.append('svg')
+    .attr('width', size).attr('height', size)
+    .style('flex-shrink', '0')
     .append('g').attr('transform', `translate(${size / 2},${size / 2})`);
 
   const total = d3.sum(data.models, d => d.total_tokens);
