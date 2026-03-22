@@ -10,7 +10,7 @@ A self-hosted dashboard that visualizes your [Claude Code](https://claude.ai/cod
 
 - **Token tracking** — Total tokens with breakdown by input, output, cache read, and cache write
 - **Cost estimation** — API cost equivalent at standard pricing
-- **Subscription quota** — Real-time utilization gauges (5-hour, 7-day, per-model) pulled from the Anthropic API with auto-detection of your plan tier. Includes projected API cost at 100% quota utilization (weekly and monthly). 7-day reset shows full date+time; all timestamps include timezone
+- **Subscription quota** — Real-time utilization gauges (5-hour, 7-day, per-model) pulled from the Anthropic API with auto-detection of your plan tier. Includes projected API cost at 100% quota utilization (weekly and monthly), calculated using the exact quota window derived from the 7-day reset time. Shows the quota window date range for transparency. Date picker defaults to the current quota period on page load
 - **Token consumption trend** — Stacked bar chart with hourly, daily, weekly, or monthly granularity. Toggle between tokens and dollar view. Includes period summary with avg/min/max stats, active hours heatmap, and smart date range limits per granularity
 - **Model distribution** — Donut chart showing usage across Claude models
 - **Cache efficiency** — Visual breakdown of cache read, cache creation, and uncached requests
