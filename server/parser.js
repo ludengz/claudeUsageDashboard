@@ -107,3 +107,23 @@ export function parseLogDirectory(baseDir) {
 
   return allRecords;
 }
+
+export function parseMultiMachineDirectory(syncDir) {
+  const allRecords = [];
+
+  let machineDirs;
+  try {
+    machineDirs = fs.readdirSync(syncDir, { withFileTypes: true })
+      .filter(d => d.isDirectory() && !d.isSymbolicLink());
+  } catch {
+    return allRecords;
+  }
+
+  for (const machineDir of machineDirs) {
+    const machinePath = path.join(syncDir, machineDir.name);
+    const records = parseLogDirectory(machinePath);
+    allRecords.push(...records);
+  }
+
+  return allRecords;
+}

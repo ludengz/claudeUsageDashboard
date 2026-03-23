@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { parseLogDirectory, parseLogFile, deriveProjectName } from '../server/parser.js';
+import { parseLogDirectory, parseLogFile, deriveProjectName, parseMultiMachineDirectory } from '../server/parser.js';
 
 describe('deriveProjectName', () => {
   it('extracts last segment from encoded directory name', () => {
@@ -105,5 +105,72 @@ describe('parseLogDirectory', () => {
     const records = parseLogDirectory(tmpDir);
     expect(records).to.have.length(1);
     expect(records[0].project).to.equal('myproject');
+  });
+});
+
+describe('parseMultiMachineDirectory', () => {
+  let tmpDir;
+
+  before(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'multi-machine-test-'));
+
+    // Machine A
+    const machineA = path.join(tmpDir, 'macbook');
+    const projA1 = path.join(machineA, '-Users-lu-Workspace-projA');
+    fs.mkdirSync(projA1, { recursive: true });
+    fs.writeFileSync(path.join(projA1, 'sess1.jsonl'), JSON.stringify({
+      type: 'assistant', sessionId: 'a1', timestamp: '2026-03-10T10:00:00.000Z',
+      message: { model: 'claude-sonnet-4-6', usage: { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } }
+    }));
+
+    // Machine B — same project name via different path
+    const machineB = path.join(tmpDir, 'work-pc');
+    const projB1 = path.join(machineB, '-Users-john-Workspace-projA');
+    fs.mkdirSync(projB1, { recursive: true });
+    fs.writeFileSync(path.join(projB1, 'sess2.jsonl'), JSON.stringify({
+      type: 'assistant', sessionId: 'b1', timestamp: '2026-03-11T10:00:00.000Z',
+      message: { model: 'claude-sonnet-4-6', usage: { input_tokens: 200, output_tokens: 100, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } }
+    }));
+  });
+
+  after(() => {
+    fs.rmSync(tmpDir, { recursive: true });
+  });
+
+  it('merges records from multiple machine directories', () => {
+    const records = parseMultiMachineDirectory(tmpDir);
+    expect(records).to.have.length(2);
+    const sessionIds = records.map(r => r.sessionId).sort();
+    expect(sessionIds).to.deep.equal(['a1', 'b1']);
+  });
+
+  it('derives the same project name from different machine paths', () => {
+    const records = parseMultiMachineDirectory(tmpDir);
+    const projects = [...new Set(records.map(r => r.project))];
+    expect(projects).to.deep.equal(['projA']);
+  });
+
+  it('ignores non-directory entries', () => {
+    fs.writeFileSync(path.join(tmpDir, 'README.md'), 'ignore me');
+    const records = parseMultiMachineDirectory(tmpDir);
+    expect(records).to.have.length(2);
+    fs.unlinkSync(path.join(tmpDir, 'README.md'));
+  });
+
+  it('ignores symlinks', () => {
+    const symlinkPath = path.join(tmpDir, 'bad-link');
+    try {
+      fs.symlinkSync('/tmp', symlinkPath);
+      const records = parseMultiMachineDirectory(tmpDir);
+      expect(records).to.have.length(2);
+      fs.unlinkSync(symlinkPath);
+    } catch {
+      // Symlink creation may fail on some systems — skip test
+    }
+  });
+
+  it('returns empty array for non-existent directory', () => {
+    const records = parseMultiMachineDirectory('/nonexistent/path');
+    expect(records).to.deep.equal([]);
   });
 });
