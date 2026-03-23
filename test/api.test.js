@@ -124,3 +124,62 @@ describe('Cache refresh', () => {
     expect(after.data.total.output_tokens).to.equal(1000);
   });
 });
+
+describe('Multi-machine sync mode', () => {
+  let syncApp, syncServer, syncBaseUrl, syncDir, localDir;
+
+  before((done) => {
+    localDir = fs.mkdtempSync(path.join(os.tmpdir(), 'api-sync-local-'));
+    syncDir = fs.mkdtempSync(path.join(os.tmpdir(), 'api-sync-shared-'));
+
+    // Create local data
+    const projDir = path.join(localDir, '-Users-test-Workspace-syncproject');
+    fs.mkdirSync(projDir);
+    fs.writeFileSync(path.join(projDir, 'sess.jsonl'), JSON.stringify({
+      type: 'assistant', sessionId: 'sync-s1', timestamp: '2026-03-10T10:00:00.000Z',
+      message: { model: 'claude-sonnet-4-6', usage: { input_tokens: 500, output_tokens: 200, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } }
+    }));
+
+    // Pre-populate another machine's data in syncDir
+    const otherMachine = path.join(syncDir, 'other-pc', '-Users-john-Workspace-syncproject');
+    fs.mkdirSync(otherMachine, { recursive: true });
+    fs.writeFileSync(path.join(otherMachine, 'sess2.jsonl'), JSON.stringify({
+      type: 'assistant', sessionId: 'sync-s2', timestamp: '2026-03-11T10:00:00.000Z',
+      message: { model: 'claude-sonnet-4-6', usage: { input_tokens: 300, output_tokens: 100, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } }
+    }));
+
+    syncApp = express();
+    // cacheTtlMs: 0 ensures every request triggers a fresh sync+parse,
+    // so tests can verify sync behavior without waiting for cache expiry
+    syncApp.use('/api', createApiRouter(localDir, {
+      cacheTtlMs: 0,
+      syncDir: syncDir,
+      machineName: 'test-mac'
+    }));
+    syncServer = syncApp.listen(0, () => {
+      syncBaseUrl = `http://localhost:${syncServer.address().port}`;
+      done();
+    });
+  });
+
+  after((done) => {
+    syncServer.close(() => {
+      fs.rmSync(localDir, { recursive: true });
+      fs.rmSync(syncDir, { recursive: true });
+      done();
+    });
+  });
+
+  it('syncs local data and reads from all machines', async () => {
+    const res = await fetch(`${syncBaseUrl}/api/usage?from=2026-03-10&to=2026-03-11`);
+    const data = await res.json();
+    expect(data.total.input_tokens).to.equal(800); // 500 + 300
+  });
+
+  it('returns projects merged across machines', async () => {
+    const res = await fetch(`${syncBaseUrl}/api/projects`);
+    const data = await res.json();
+    expect(data.projects).to.have.length(1);
+    expect(data.projects[0].name).to.equal('syncproject');
+  });
+});
